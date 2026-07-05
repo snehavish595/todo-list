@@ -4,9 +4,11 @@ const categorySelect = document.getElementById('categorySelect');
 const addBtn = document.getElementById('addBtn');
 const taskList = document.getElementById('taskList');
 const clearAllBtn = document.getElementById('clearAllBtn');
+const filterButtons = document.querySelectorAll('.filter-btn');
 
-// Load existing tasks from Local Storage, or default to an empty array
+// State Management
 let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+let currentFilter = 'all'; // Tracks 'all', 'active', or 'completed'
 
 // Function to save tasks array to Local Storage
 function saveTasks() {
@@ -23,20 +25,35 @@ function toggleClearButton() {
     }
 }
 
-// Function to render all tasks onto the screen
+// Function to manage Tailwind classes for the active filter tab look
+function updateTabUI() {
+    filterButtons.forEach(btn => {
+        if (btn.getAttribute('data-filter') === currentFilter) {
+            btn.classList.add('text-indigo-600', 'border-indigo-600');
+            btn.classList.remove('text-slate-500', 'border-transparent');
+        } else {
+            btn.classList.remove('text-indigo-600', 'border-indigo-600');
+            btn.classList.add('text-slate-500', 'border-transparent');
+        }
+    });
+}
+
+// Function to render tasks onto the screen based on filter choice
 function renderTasks() {
     taskList.innerHTML = ''; // Clear current UI list
     
     tasks.forEach((task, index) => {
+        // Filter Check: Skip items that don't match our current active view
+        if (currentFilter === 'active' && task.completed) return;
+        if (currentFilter === 'completed' && !task.completed) return;
+
         const li = document.createElement('li');
         li.className = "flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg group hover:border-slate-300 transition-colors";
 
-        // Determine tag colors based on category
         let tagColor = "bg-blue-100 text-blue-800";
         if (task.category === "Personal") tagColor = "bg-green-100 text-green-800";
         if (task.category === "Urgent") tagColor = "bg-red-100 text-red-800";
 
-        // Setup strike-through styling classes if completed
         const textStyle = task.completed ? 'line-through text-slate-400' : 'text-slate-700';
         const isChecked = task.completed ? 'checked' : '';
 
@@ -56,13 +73,13 @@ function renderTasks() {
         checkbox.addEventListener('change', () => {
             tasks[index].completed = checkbox.checked;
             saveTasks();
-            renderTasks(); // Re-render to apply classes cleanly
+            renderTasks(); 
         });
 
         // Individual Delete Button Listener
         const deleteBtn = li.querySelector('.delete-btn');
         deleteBtn.addEventListener('click', () => {
-            tasks.splice(index, 1); // Remove from array
+            tasks.splice(index, 1); 
             saveTasks();
             renderTasks();
         });
@@ -83,7 +100,6 @@ function addTask() {
         return;
     }
 
-    // Push new task object to global array
     tasks.push({
         text: taskText,
         category: category,
@@ -92,24 +108,32 @@ function addTask() {
 
     saveTasks();
     renderTasks();
-    taskInput.value = ''; // Reset input field
+    taskInput.value = ''; 
 }
 
-// Event Listeners
+// Event Listeners for Interaction
 addBtn.addEventListener('click', addTask);
 
 taskInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addTask();
 });
 
-// Clear All Functionality
 clearAllBtn.addEventListener('click', () => {
     if (confirm('Are you sure you want to delete all tasks?')) {
-        tasks = []; // Reset array
+        tasks = []; 
         saveTasks();
         renderTasks();
     }
 });
 
-// Initial load build out
+// Setup click events on individual filter tabs
+filterButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        currentFilter = button.getAttribute('data-filter');
+        updateTabUI();
+        renderTasks();
+    });
+});
+
+// Initial application bootstrap
 renderTasks();
