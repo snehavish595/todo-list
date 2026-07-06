@@ -1,6 +1,7 @@
 // DOM Element Registry
 const taskInput = document.getElementById('taskInput');
 const categorySelect = document.getElementById('categorySelect');
+const dateInput = document.getElementById('dateInput');
 const addBtn = document.getElementById('addBtn');
 const taskList = document.getElementById('taskList');
 const clearAllBtn = document.getElementById('clearAllBtn');
@@ -16,7 +17,11 @@ let tasks = JSON.parse(localStorage.getItem('zenTasks')) || [];
 let currentFilter = 'all';
 let soundEnabled = JSON.parse(localStorage.getItem('zenSound')) ?? true;
 
-// Web Audio API Synthesizer Pipeline (No external files required!)
+// Pre-fill date input with today's date as default choice
+const today = new Date().toISOString().split('T')[0];
+dateInput.value = today;
+
+// Web Audio API Synthesizer Pipeline
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(type) {
@@ -40,8 +45,8 @@ function playSound(type) {
         osc.stop(now + 0.1);
     } else if (type === 'complete') {
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now); // C5 node
-        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5 node
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
         gainNode.gain.setValueAtTime(0.2, now);
         gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
         osc.start(now);
@@ -63,7 +68,6 @@ function saveTasks() {
     updateMetrics();
 }
 
-// Metrics Engine
 function updateMetrics() {
     const total = tasks.length;
     const completed = tasks.filter(t => t.completed).length;
@@ -79,7 +83,6 @@ function updateMetrics() {
     }
 }
 
-// Advanced UI Tab Management
 function updateTabUI() {
     filterButtons.forEach(btn => {
         if (btn.getAttribute('data-filter') === currentFilter) {
@@ -94,14 +97,24 @@ function updateTabUI() {
 function renderTasks() {
     taskList.innerHTML = '';
     let renderedCount = 0;
+    const todayStr = new Date().toISOString().split('T')[0];
     
     tasks.forEach((task, index) => {
         if (currentFilter === 'active' && task.completed) return;
         if (currentFilter === 'completed' && !task.completed) return;
 
         renderedCount++;
+        
+        // Date evaluation engine: Check if task is overdue
+        const isOverdue = !task.completed && task.dueDate && task.dueDate < todayStr;
+
         const li = document.createElement('li');
-        li.className = "flex items-center justify-between p-3.5 bg-slate-50/60 border border-slate-100 rounded-xl group hover:bg-white hover:border-indigo-100 transition-all duration-200";
+        // If overdue, apply a light red border and pulse container wrapper
+        li.className = `flex items-center justify-between p-3.5 border rounded-xl group hover:bg-white transition-all duration-200 ${
+            isOverdue 
+            ? 'bg-rose-50/50 border-rose-200 overdue-pulse shadow-sm shadow-rose-100' 
+            : 'bg-slate-50/60 border-slate-100 hover:border-indigo-100'
+        }`;
 
         let tagColor = "bg-blue-50 text-blue-600 border border-blue-100";
         if (task.category === "Personal") tagColor = "bg-emerald-50 text-emerald-600 border border-emerald-100";
@@ -110,11 +123,25 @@ function renderTasks() {
         const textStyle = task.completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium';
         const isChecked = task.completed ? 'checked' : '';
 
+        // Readable date text handler
+        let dateBadge = '';
+        if (task.dueDate) {
+            const displayDate = new Date(task.dueDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+            dateBadge = isOverdue 
+                ? `<span class="text-[10px] bg-rose-600 text-white font-bold px-1.5 py-0.5 rounded shadow-sm">⚠️ OVERDUE (${displayDate})</span>`
+                : `<span class="text-[11px] text-slate-400 font-normal">📅 ${displayDate}</span>`;
+        }
+
         li.innerHTML = `
             <div class="flex items-center gap-3 flex-1 min-w-0">
                 <input type="checkbox" ${isChecked} class="w-5 h-5 text-indigo-600 rounded-lg focus:ring-indigo-500/30 border-slate-300 cursor-pointer checkbox-btn transition-all">
-                <span class="task-text truncate text-sm transition-all ${textStyle}">${task.text}</span>
-                <span class="text-[10px] tracking-wide uppercase px-2 py-0.5 rounded-md font-bold shrink-0 ${tagColor}">${task.category}</span>
+                <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+                    <span class="task-text truncate text-sm transition-all ${textStyle}">${task.text}</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-[9px] tracking-wide uppercase px-1.5 py-0.2 rounded font-bold shrink-0 ${tagColor}">${task.category}</span>
+                        ${dateBadge}
+                    </div>
+                </div>
             </div>
             <button class="text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 p-1 ml-2 delete-btn transform scale-90 group-hover:scale-100">
                 ✕
@@ -142,7 +169,6 @@ function renderTasks() {
         taskList.appendChild(li);
     });
 
-    // Handle Empty Placeholder States
     if (renderedCount === 0) {
         emptyState.classList.remove('hidden');
     } else {
@@ -156,19 +182,22 @@ function renderTasks() {
 function addTask() {
     const taskText = taskInput.value.trim();
     const category = categorySelect.value;
+    const dueDate = dateInput.value;
 
     if (taskText === '') return;
 
-    tasks.unshift({ // Add items to top of list
+    tasks.unshift({
         text: taskText,
         category: category,
+        dueDate: dueDate || null,
         completed: false
     });
 
     playSound('add');
     saveTasks();
     renderTasks();
-    taskInput.value = ''; 
+    taskInput.value = '';
+    dateInput.value = today; // Reset date to today
 }
 
 // User Action Inbound Handlers
@@ -191,7 +220,6 @@ filterButtons.forEach(button => {
     });
 });
 
-// Sound Configurations Manager
 soundToggle.addEventListener('click', () => {
     soundEnabled = !soundEnabled;
     localStorage.setItem('zenSound', JSON.stringify(soundEnabled));
@@ -203,6 +231,5 @@ soundToggle.addEventListener('click', () => {
 });
 
 // App Startup Bootstrapper
-soundIcon.textContent = soundEnabled ? '🔊' : '🔇';
 updateMetrics();
 renderTasks();

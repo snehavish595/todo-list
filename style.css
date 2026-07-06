@@ -8,13 +8,22 @@
     animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Red alert badge pulse effect */
+@keyframes softPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.03); opacity: 0.9; }
+}
+
+.overdue-pulse {
+    animation: softPulse 2s infinite ease-in-out;
+}
+
 /* Custom Checkbox accent styling wrapper overrides */
 input[type="checkbox"]:checked + span {
     position: relative;
     transition: color 0.3s ease;
 }
 
-/* Custom slick hover effects */
 .filter-btn {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
