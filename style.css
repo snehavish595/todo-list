@@ -1,15 +1,20 @@
-/* Custom smooth transition when tasks are deleted or added */
-#taskList li {
-    animation: fadeIn 0.2s ease-in-out;
+/* Fluid task addition animation */
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.96) translateY(4px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+#taskList li {
+    animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Checkbox accent styling wrapper overrides */
+input[type="checkbox"]:checked + span {
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+/* Custom slick hover effects */
+.filter-btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
