@@ -4,23 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZenTask Pro</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 font-sans min-h-screen flex items-center justify-center p-4">
+<body class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 font-sans min-h-screen flex items-center justify-center p-4 transition-all duration-700" id="bodyBg">
 
-    <div class="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20 transition-all duration-300 hover:shadow-indigo-500/10">
+    <div class="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20 transition-all duration-500 relative overflow-hidden" id="mainContainer">
         
+        <!-- Header Controls & Multiplier Streak Badge -->
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent flex items-center gap-2 tracking-tight">
-                <span>⚡</span> ZenTask
-            </h1>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent flex items-center gap-2 tracking-tight transition-all duration-500" id="brandLogo">
+                    <span>⚡</span> ZenTask
+                </h1>
+                <!-- Dynamic Streak Badge -->
+                <div id="streakBadge" class="hidden text-[11px] font-black px-2 py-0.5 rounded-full text-white bg-slate-800 tracking-wider shadow-sm transition-all duration-300">
+                    🔥 STREAK: <span id="streakCount">0</span>x
+                </div>
+            </div>
             <button id="soundToggle" class="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 transition-all text-xs flex items-center gap-1 font-medium">
                 <span id="soundIcon">🔊</span> Sound On
             </button>
         </div>
 
-        <div class="bg-gradient-to-r from-indigo-50 to-violet-50 p-4 rounded-xl mb-6 border border-indigo-100/50">
+        <!-- Focal Timer Overlay Banner (Hidden until triggered) -->
+        <div id="focalTimerBanner" class="bg-slate-900 text-white p-3 rounded-xl mb-6 hidden items-center justify-between shadow-lg border border-indigo-500/30 animate-pulse">
+            <div class="flex items-center gap-2 text-xs">
+                <span class="text-base animate-spin">🎯</span>
+                <div>
+                    <p class="font-bold tracking-wide text-indigo-400">FOCAL SPEED CHALLENGE</p>
+                    <p id="focalTaskPreview" class="text-[11px] text-slate-300 truncate max-w-[200px]">Task placeholder...</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span id="timerClock" class="text-lg font-mono font-black text-rose-400">60s</span>
+                <button id="cancelFocalBtn" class="block text-[10px] text-slate-400 hover:text-white underline">Give up</button>
+            </div>
+        </div>
+
+        <!-- Interactive Progress Card -->
+        <div class="bg-gradient-to-r from-indigo-50 to-violet-50 p-4 rounded-xl mb-6 border border-indigo-100/50 transition-all duration-500" id="progressCard">
             <div class="flex justify-between items-center text-sm font-semibold text-slate-700 mb-2">
                 <span>Daily Momentum</span>
                 <span id="statsText" class="text-xs bg-white px-2 py-0.5 rounded-full shadow-sm text-indigo-600">0/0 completed</span>
@@ -30,7 +54,8 @@
             </div>
         </div>
 
-        <div class="flex flex-col gap-3 mb-6">
+        <!-- Inputs Group -->
+        <div id="inputFormGroup" class="flex flex-col gap-3 mb-6 transition-all duration-300">
             <div class="flex gap-2">
                 <input type="text" id="taskInput" placeholder="What needs to be done?" 
                     class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/50 transition-all placeholder:text-slate-400 text-slate-700 text-sm">
@@ -61,15 +86,18 @@
             </div>
         </div>
 
-        <div class="flex bg-slate-100/80 p-1 rounded-xl mb-4 text-xs font-semibold text-slate-500" id="filterTabs">
+        <!-- Filter Sub-navigation -->
+        <div class="flex bg-slate-100/80 p-1 rounded-xl mb-4 text-xs font-semibold text-slate-500 transition-all duration-300" id="filterTabs">
             <button data-filter="all" class="flex-1 py-2 rounded-lg transition-all filter-btn">All</button>
             <button data-filter="active" class="flex-1 py-2 rounded-lg transition-all filter-btn">Active</button>
             <button data-filter="completed" class="flex-1 py-2 rounded-lg transition-all filter-btn">Completed</button>
         </div>
 
+        <!-- Task Canvas Viewport -->
         <div class="relative min-h-[200px]">
             <ul id="taskList" class="space-y-2.5 z-10 relative"></ul>
             
+            <!-- Dynamic Empty State Box -->
             <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 hidden">
                 <svg class="w-16 h-16 text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

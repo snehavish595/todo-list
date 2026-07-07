@@ -12,12 +12,31 @@ const emptyState = document.getElementById('emptyState');
 const soundToggle = document.getElementById('soundToggle');
 const soundIcon = document.getElementById('soundIcon');
 
+// UNIQUE COMPONENT DOM REGISTRY
+const streakBadge = document.getElementById('streakBadge');
+const streakCount = document.getElementById('streakCount');
+const focalTimerBanner = document.getElementById('focalTimerBanner');
+const focalTaskPreview = document.getElementById('focalTaskPreview');
+const timerClock = document.getElementById('timerClock');
+const cancelFocalBtn = document.getElementById('cancelFocalBtn');
+const bodyBg = document.getElementById('bodyBg');
+const mainContainer = document.getElementById('mainContainer');
+const brandLogo = document.getElementById('brandLogo');
+const progressCard = document.getElementById('progressCard');
+const inputFormGroup = document.getElementById('inputFormGroup');
+const filterTabs = document.getElementById('filterTabs');
+
 // Application States
 let tasks = JSON.parse(localStorage.getItem('zenTasks')) || [];
 let currentFilter = 'all';
 let soundEnabled = JSON.parse(localStorage.getItem('zenSound')) ?? true;
 
-// Pre-fill date input with today's date as default choice
+// Unique Gamification States
+let activeFocalId = null;
+let focalCountdown = null;
+let secondsLeft = 60;
+let streak = JSON.parse(localStorage.getItem('zenStreakScore')) || 0;
+
 const today = new Date().toISOString().split('T')[0];
 dateInput.value = today;
 
@@ -32,40 +51,38 @@ function playSound(type) {
     const gainNode = audioCtx.createGain();
     osc.connect(gainNode);
     gainNode.connect(audioCtx.destination);
-
     const now = audioCtx.currentTime;
 
     if (type === 'add') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, now);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(400, now);
         osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-        gainNode.gain.setValueAtTime(0.15, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-        osc.start(now);
-        osc.stop(now + 0.1);
+        gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
     } else if (type === 'complete') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.setValueAtTime(659.25, now + 0.08);
-        gainNode.gain.setValueAtTime(0.2, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-        osc.start(now);
-        osc.stop(now + 0.25);
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now + 0.08);
+        gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now); osc.stop(now + 0.25);
     } else if (type === 'delete') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.linearRampToValueAtTime(80, now + 0.15);
-        gainNode.gain.setValueAtTime(0.1, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-        osc.start(now);
-        osc.stop(now + 0.15);
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.linearRampToValueAtTime(80, now + 0.15);
+        gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'streak') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+        gainNode.gain.setValueAtTime(0.25, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'fail') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(60, now + 0.4);
+        gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
     }
 }
 
 // Data Synchronizers
 function saveTasks() {
     localStorage.setItem('zenTasks', JSON.stringify(tasks));
+    localStorage.setItem('zenStreakScore', JSON.stringify(streak));
     updateMetrics();
+    updateGamificationThemes();
 }
 
 function updateMetrics() {
@@ -75,22 +92,91 @@ function updateMetrics() {
     
     progressBar.style.width = `${percentage}%`;
     statsText.textContent = `${completed}/${total} completed`;
+    clearAllBtn.classList.toggle('hidden', total === 0);
+}
 
-    if (total > 0) {
-        clearAllBtn.classList.remove('hidden');
+// Streak Style Multiplier Theme Engine
+function updateGamificationThemes() {
+    mainContainer.className = "bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20 transition-all duration-500 relative overflow-hidden";
+    brandLogo.className = "text-2xl font-black bg-gradient-to-r bg-clip-text text-transparent flex items-center gap-2 tracking-tight transition-all duration-500";
+    
+    if (streak === 0) {
+        streakBadge.classList.add('hidden');
+        brandLogo.classList.add('from-indigo-600', 'to-violet-600');
     } else {
-        clearAllBtn.classList.add('hidden');
+        streakBadge.classList.remove('hidden');
+        streakCount.textContent = streak;
+        
+        if (streak <= 2) {
+            streakBadge.className = "text-[11px] font-black px-2 py-0.5 rounded-full text-white bg-gradient-to-r from-amber-600 to-orange-600 tracking-wider shadow-sm";
+            brandLogo.classList.add('from-amber-500', 'to-orange-600');
+        } else if (streak <= 4) {
+            mainContainer.classList.add('streak-cyan');
+            streakBadge.className = "text-[11px] font-black px-2 py-0.5 rounded-full text-white bg-gradient-to-r from-cyan-500 to-blue-600 tracking-wider shadow-sm";
+            brandLogo.classList.add('from-cyan-500', 'to-blue-600');
+        } else {
+            mainContainer.classList.add('streak-gold');
+            streakBadge.className = "text-[11px] font-black px-2 py-0.5 rounded-full text-slate-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 tracking-wider shadow-black font-black animate-bounce";
+            brandLogo.classList.add('from-yellow-500', 'to-amber-500');
+        }
     }
 }
 
 function updateTabUI() {
     filterButtons.forEach(btn => {
-        if (btn.getAttribute('data-filter') === currentFilter) {
-            btn.className = "flex-1 py-2 rounded-lg transition-all filter-btn bg-white text-indigo-600 shadow-sm";
-        } else {
-            btn.className = "flex-1 py-2 rounded-lg transition-all filter-btn text-slate-500 hover:text-slate-800 hover:bg-slate-200/50";
-        }
+        const isCurrent = btn.getAttribute('data-filter') === currentFilter;
+        btn.className = isCurrent 
+            ? "flex-1 py-2 rounded-lg transition-all filter-btn bg-white text-indigo-600 shadow-sm"
+            : "flex-1 py-2 rounded-lg transition-all filter-btn text-slate-500 hover:text-slate-800 hover:bg-slate-200/50";
     });
+}
+
+// Focus Matrix Processing Actions
+function triggerFocalFocus(task) {
+    activeFocalId = task.id;
+    secondsLeft = 60;
+    focalTaskPreview.textContent = task.text;
+    timerClock.textContent = `${secondsLeft}s`;
+    
+    focalTimerBanner.classList.remove('hidden');
+    focalTimerBanner.classList.add('flex');
+    
+    // Visually push out alternative elements to maximize user focus
+    inputFormGroup.classList.add('opacity-10,', 'pointer-events-none', 'scale-95');
+    filterTabs.classList.add('opacity-10', 'pointer-events-none');
+    
+    bodyBg.className = "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 font-sans min-h-screen flex items-center justify-center p-4 transition-all duration-700";
+
+    focalCountdown = setInterval(() => {
+        secondsLeft--;
+        timerClock.textContent = `${secondsLeft}s`;
+        if (secondsLeft <= 10) timerClock.className = "text-lg font-mono font-black text-red-500 animate-ping";
+
+        if (secondsLeft <= 0) {
+            breakFocalStreak(true);
+        }
+    }, 1000);
+
+    renderTasks();
+}
+
+function breakFocalStreak(failedChallenge = false) {
+    clearInterval(focalCountdown);
+    activeFocalId = null;
+    focalTimerBanner.className = "bg-slate-900 text-white p-3 rounded-xl mb-6 hidden items-center justify-between shadow-lg border border-indigo-500/30 animate-pulse";
+    timerClock.className = "text-lg font-mono font-black text-rose-400";
+    
+    inputFormGroup.className = "flex flex-col gap-3 mb-6 transition-all duration-300";
+    filterTabs.className = "flex bg-slate-100/80 p-1 rounded-xl mb-4 text-xs font-semibold text-slate-500 transition-all duration-300";
+    bodyBg.className = "bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 font-sans min-h-screen flex items-center justify-center p-4 transition-all duration-700";
+
+    if (failedChallenge) {
+        streak = 0;
+        playSound('fail');
+        saveTasks();
+        alert('Time expired! Your Zen Focus Streak broke.');
+    }
+    renderTasks();
 }
 
 // Render Engine
@@ -99,21 +185,23 @@ function renderTasks() {
     let renderedCount = 0;
     const todayStr = new Date().toISOString().split('T')[0];
     
-    tasks.forEach((task, index) => {
-        if (currentFilter === 'active' && task.completed) return;
-        if (currentFilter === 'completed' && !task.completed) return;
+    tasks.forEach((task) => {
+        // If an explicit focus trial is running, suppress every other list option entirely
+        if (activeFocalId && task.id !== activeFocalId) return;
+
+        if (!activeFocalId) {
+            if (currentFilter === 'active' && task.completed) return;
+            if (currentFilter === 'completed' && !task.completed) return;
+        }
 
         renderedCount++;
-        
-        // Date evaluation engine: Check if task is overdue
         const isOverdue = !task.completed && task.dueDate && task.dueDate < todayStr;
-
         const li = document.createElement('li');
-        // If overdue, apply a light red border and pulse container wrapper
+        
         li.className = `flex items-center justify-between p-3.5 border rounded-xl group hover:bg-white transition-all duration-200 ${
-            isOverdue 
-            ? 'bg-rose-50/50 border-rose-200 overdue-pulse shadow-sm shadow-rose-100' 
-            : 'bg-slate-50/60 border-slate-100 hover:border-indigo-100'
+            activeFocalId ? 'bg-indigo-50/40 border-indigo-300 ring-4 ring-indigo-500/10' :
+            isOverdue ? 'bg-rose-50/50 border-rose-200 overdue-pulse shadow-sm shadow-rose-100' : 
+            'bg-slate-50/60 border-slate-100 hover:border-indigo-100'
         }`;
 
         let tagColor = "bg-blue-50 text-blue-600 border border-blue-100";
@@ -123,7 +211,6 @@ function renderTasks() {
         const textStyle = task.completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium';
         const isChecked = task.completed ? 'checked' : '';
 
-        // Readable date text handler
         let dateBadge = '';
         if (task.dueDate) {
             const displayDate = new Date(task.dueDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
@@ -131,6 +218,9 @@ function renderTasks() {
                 ? `<span class="text-[10px] bg-rose-600 text-white font-bold px-1.5 py-0.5 rounded shadow-sm">⚠️ OVERDUE (${displayDate})</span>`
                 : `<span class="text-[11px] text-slate-400 font-normal">📅 ${displayDate}</span>`;
         }
+
+        // Hide target choice buttons on finished cards
+        const targetBtnVisibility = (task.completed || activeFocalId) ? 'hidden' : 'inline-block';
 
         li.innerHTML = `
             <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -143,25 +233,46 @@ function renderTasks() {
                     </div>
                 </div>
             </div>
-            <button class="text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 p-1 ml-2 delete-btn transform scale-90 group-hover:scale-100">
-                ✕
-            </button>
+            <div class="flex items-center gap-1.5">
+                <button title="Start 60s Focus Sprint" class="text-slate-300 hover:text-indigo-600 p-1 rounded transition-all transform hover:scale-110 focal-target-btn ${targetBtnVisibility}">
+                    🎯
+                </button>
+                <button class="text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 p-1 delete-btn transform scale-90 group-hover:scale-100">
+                    ✕
+                </button>
+            </div>
         `;
 
-        // Interactive Checkbox Engine
+        // Interactive Checkbox Actions
         const checkbox = li.querySelector('.checkbox-btn');
         checkbox.addEventListener('change', () => {
-            tasks[index].completed = checkbox.checked;
-            if (checkbox.checked) playSound('complete');
+            task.completed = checkbox.checked;
+            
+            if (checkbox.checked) {
+                if (activeFocalId && task.id === activeFocalId) {
+                    streak++;
+                    playSound('streak');
+                    clearInterval(focalCountdown);
+                    activeFocalId = null;
+                    breakFocalStreak(false);
+                } else {
+                    playSound('complete');
+                }
+            }
             saveTasks();
             renderTasks(); 
         });
 
-        // Interactive Delete Engine
-        const deleteBtn = li.querySelector('.delete-btn');
-        deleteBtn.addEventListener('click', () => {
+        // Trigger Sprint Engine Click Binding
+        if (!task.completed && !activeFocalId) {
+            li.querySelector('.focal-target-btn').addEventListener('click', () => triggerFocalFocus(task));
+        }
+
+        // Interactive Delete Actions
+        li.querySelector('.delete-btn').addEventListener('click', () => {
             playSound('delete');
-            tasks.splice(index, 1); 
+            if (activeFocalId && task.id === activeFocalId) breakFocalStreak(false);
+            tasks = tasks.filter(t => t.id !== task.id);
             saveTasks();
             renderTasks();
         });
@@ -169,12 +280,7 @@ function renderTasks() {
         taskList.appendChild(li);
     });
 
-    if (renderedCount === 0) {
-        emptyState.classList.remove('hidden');
-    } else {
-        emptyState.classList.add('hidden');
-    }
-
+    emptyState.classList.toggle('hidden', renderedCount > 0);
     updateTabUI();
 }
 
@@ -187,6 +293,7 @@ function addTask() {
     if (taskText === '') return;
 
     tasks.unshift({
+        id: Date.now().toString(), // Explicit ID mappings required for focus states management
         text: taskText,
         category: category,
         dueDate: dueDate || null,
@@ -197,16 +304,18 @@ function addTask() {
     saveTasks();
     renderTasks();
     taskInput.value = '';
-    dateInput.value = today; // Reset date to today
+    dateInput.value = today;
 }
 
 // User Action Inbound Handlers
 addBtn.addEventListener('click', addTask);
 taskInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
+cancelFocalBtn.addEventListener('click', () => breakFocalStreak(true));
 
 clearAllBtn.addEventListener('click', () => {
     if (confirm('Clear entire canvas?')) {
-        tasks = []; 
+        tasks = [];
+        streak = 0;
         playSound('delete');
         saveTasks();
         renderTasks();
@@ -231,5 +340,5 @@ soundToggle.addEventListener('click', () => {
 });
 
 // App Startup Bootstrapper
-updateMetrics();
+saveTasks();
 renderTasks();
