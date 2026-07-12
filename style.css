@@ -17,8 +17,6 @@
     animation: softPulse 2s infinite ease-in-out;
 }
 
-/* Cosmic high-streak glows */
-.streak-bronze { shadow-color: #f59e0b; }
 .streak-cyan { box-shadow: 0 0 25px rgba(6, 182, 212, 0.25); }
 .streak-gold { box-shadow: 0 0 35px rgba(234, 179, 8, 0.4); animation: softPulse 3s infinite ease-in-out; }
 

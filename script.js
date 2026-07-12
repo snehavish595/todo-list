@@ -12,7 +12,7 @@ const emptyState = document.getElementById('emptyState');
 const soundToggle = document.getElementById('soundToggle');
 const soundIcon = document.getElementById('soundIcon');
 
-// UNIQUE COMPONENT DOM REGISTRY
+// Gamification Registry
 const streakBadge = document.getElementById('streakBadge');
 const streakCount = document.getElementById('streakCount');
 const focalTimerBanner = document.getElementById('focalTimerBanner');
@@ -22,16 +22,21 @@ const cancelFocalBtn = document.getElementById('cancelFocalBtn');
 const bodyBg = document.getElementById('bodyBg');
 const mainContainer = document.getElementById('mainContainer');
 const brandLogo = document.getElementById('brandLogo');
-const progressCard = document.getElementById('progressCard');
 const inputFormGroup = document.getElementById('inputFormGroup');
 const filterTabs = document.getElementById('filterTabs');
+
+// INSIGHT PANEL REGISTRY (NEW FEATURE)
+const insightsToggleBtn = document.getElementById('insightsToggleBtn');
+const insightsPanel = document.getElementById('insightsPanel');
+const closeInsightsBtn = document.getElementById('closeInsightsBtn');
+const completionRateStat = document.getElementById('completionRateStat');
+const topCategoryStat = document.getElementById('topCategoryStat');
+const insightsReportText = document.getElementById('insightsReportText');
 
 // Application States
 let tasks = JSON.parse(localStorage.getItem('zenTasks')) || [];
 let currentFilter = 'all';
 let soundEnabled = JSON.parse(localStorage.getItem('zenSound')) ?? true;
-
-// Unique Gamification States
 let activeFocalId = null;
 let focalCountdown = null;
 let secondsLeft = 60;
@@ -83,6 +88,7 @@ function saveTasks() {
     localStorage.setItem('zenStreakScore', JSON.stringify(streak));
     updateMetrics();
     updateGamificationThemes();
+    calculateInsights(); // Auto-recalculate whenever data array morphs
 }
 
 function updateMetrics() {
@@ -95,7 +101,47 @@ function updateMetrics() {
     clearAllBtn.classList.toggle('hidden', total === 0);
 }
 
-// Streak Style Multiplier Theme Engine
+// NEW FUNCTIONALITY: Weekly Insight Engine
+function calculateInsights() {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.completed).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    completionRateStat.textContent = `${percentage}%`;
+
+    // Compute Preferred Domain mode
+    if (total === 0) {
+        topCategoryStat.textContent = "None";
+        insightsReportText.textContent = `"Your canvas is clear. Add tasks to discover your workflow archetype."`;
+        return;
+    }
+
+    const counts = {};
+    let maxCat = "None";
+    let maxCount = 0;
+    
+    tasks.forEach(t => {
+        counts[t.category] = (counts[t.category] || 0) + 1;
+        if (counts[t.category] > maxCount) {
+            maxCount = counts[t.category];
+            maxCat = t.category;
+        }
+    });
+    
+    topCategoryStat.textContent = maxCat;
+
+    // Behavioral Report Generation Rules
+    if (percentage === 0) {
+        insightsReportText.textContent = `"Plan mapped, but momentum stalled. Choose a task, hit the 🎯 icon, and challenge yourself to build execution habits!"`;
+    } else if (percentage < 50) {
+        insightsReportText.textContent = `"You are focusing heavily on ${maxCat} issues. Be careful not to let backlog build up in other operational sectors."`;
+    } else if (percentage < 100) {
+        insightsReportText.textContent = `"Excellent balance. Your current focus velocity reveals high executive control over your ${maxCat} tasks."`;
+    } else {
+        insightsReportText.textContent = `"Flawless completion state achieved! You've completely dominated your dashboard. Your absolute focus is legendary."`;
+    }
+}
+
 function updateGamificationThemes() {
     mainContainer.className = "bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20 transition-all duration-500 relative overflow-hidden";
     brandLogo.className = "text-2xl font-black bg-gradient-to-r bg-clip-text text-transparent flex items-center gap-2 tracking-tight transition-all duration-500";
@@ -116,7 +162,7 @@ function updateGamificationThemes() {
             brandLogo.classList.add('from-cyan-500', 'to-blue-600');
         } else {
             mainContainer.classList.add('streak-gold');
-            streakBadge.className = "text-[11px] font-black px-2 py-0.5 rounded-full text-slate-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 tracking-wider shadow-black font-black animate-bounce";
+            streakBadge.className = "text-[11px] font-black px-2 py-0.5 rounded-full text-slate-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 tracking-wider font-black animate-bounce";
             brandLogo.classList.add('from-yellow-500', 'to-amber-500');
         }
     }
@@ -131,7 +177,6 @@ function updateTabUI() {
     });
 }
 
-// Focus Matrix Processing Actions
 function triggerFocalFocus(task) {
     activeFocalId = task.id;
     secondsLeft = 60;
@@ -141,10 +186,8 @@ function triggerFocalFocus(task) {
     focalTimerBanner.classList.remove('hidden');
     focalTimerBanner.classList.add('flex');
     
-    // Visually push out alternative elements to maximize user focus
-    inputFormGroup.classList.add('opacity-10,', 'pointer-events-none', 'scale-95');
+    inputFormGroup.classList.add('opacity-10', 'pointer-events-none', 'scale-95');
     filterTabs.classList.add('opacity-10', 'pointer-events-none');
-    
     bodyBg.className = "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 font-sans min-h-screen flex items-center justify-center p-4 transition-all duration-700";
 
     focalCountdown = setInterval(() => {
@@ -186,7 +229,6 @@ function renderTasks() {
     const todayStr = new Date().toISOString().split('T')[0];
     
     tasks.forEach((task) => {
-        // If an explicit focus trial is running, suppress every other list option entirely
         if (activeFocalId && task.id !== activeFocalId) return;
 
         if (!activeFocalId) {
@@ -219,7 +261,6 @@ function renderTasks() {
                 : `<span class="text-[11px] text-slate-400 font-normal">📅 ${displayDate}</span>`;
         }
 
-        // Hide target choice buttons on finished cards
         const targetBtnVisibility = (task.completed || activeFocalId) ? 'hidden' : 'inline-block';
 
         li.innerHTML = `
@@ -243,7 +284,6 @@ function renderTasks() {
             </div>
         `;
 
-        // Interactive Checkbox Actions
         const checkbox = li.querySelector('.checkbox-btn');
         checkbox.addEventListener('change', () => {
             task.completed = checkbox.checked;
@@ -263,12 +303,10 @@ function renderTasks() {
             renderTasks(); 
         });
 
-        // Trigger Sprint Engine Click Binding
         if (!task.completed && !activeFocalId) {
             li.querySelector('.focal-target-btn').addEventListener('click', () => triggerFocalFocus(task));
         }
 
-        // Interactive Delete Actions
         li.querySelector('.delete-btn').addEventListener('click', () => {
             playSound('delete');
             if (activeFocalId && task.id === activeFocalId) breakFocalStreak(false);
@@ -284,7 +322,6 @@ function renderTasks() {
     updateTabUI();
 }
 
-// Interactive Task Creation
 function addTask() {
     const taskText = taskInput.value.trim();
     const category = categorySelect.value;
@@ -293,7 +330,7 @@ function addTask() {
     if (taskText === '') return;
 
     tasks.unshift({
-        id: Date.now().toString(), // Explicit ID mappings required for focus states management
+        id: Date.now().toString(),
         text: taskText,
         category: category,
         dueDate: dueDate || null,
@@ -307,7 +344,7 @@ function addTask() {
     dateInput.value = today;
 }
 
-// User Action Inbound Handlers
+// User Action Handlers
 addBtn.addEventListener('click', addTask);
 taskInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
 cancelFocalBtn.addEventListener('click', () => breakFocalStreak(true));
@@ -337,6 +374,16 @@ soundToggle.addEventListener('click', () => {
         ? "text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 transition-all text-xs flex items-center gap-1 font-medium"
         : "text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-all text-xs flex items-center gap-1 font-medium";
     soundToggle.innerHTML = `<span>${soundEnabled ? '🔊' : '🔇'}</span> Sound ${soundEnabled ? 'On' : 'Off'}`;
+});
+
+// Insights Panel Toggle Interactions
+insightsToggleBtn.addEventListener('click', () => {
+    insightsPanel.classList.toggle('hidden');
+    insightsPanel.classList.toggle('flex');
+});
+closeInsightsBtn.addEventListener('click', () => {
+    insightsPanel.classList.add('hidden');
+    insightsPanel.classList.remove('flex');
 });
 
 // App Startup Bootstrapper
