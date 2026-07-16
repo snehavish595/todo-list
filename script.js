@@ -25,7 +25,7 @@ const brandLogo = document.getElementById('brandLogo');
 const inputFormGroup = document.getElementById('inputFormGroup');
 const filterTabs = document.getElementById('filterTabs');
 
-// INSIGHT PANEL REGISTRY (NEW FEATURE)
+// Insight Panel Registry
 const insightsToggleBtn = document.getElementById('insightsToggleBtn');
 const insightsPanel = document.getElementById('insightsPanel');
 const closeInsightsBtn = document.getElementById('closeInsightsBtn');
@@ -41,6 +41,7 @@ let activeFocalId = null;
 let focalCountdown = null;
 let secondsLeft = 60;
 let streak = JSON.parse(localStorage.getItem('zenStreakScore')) || 0;
+let expandedTaskId = null; // Track note drawer expansions separately
 
 const today = new Date().toISOString().split('T')[0];
 dateInput.value = today;
@@ -88,7 +89,7 @@ function saveTasks() {
     localStorage.setItem('zenStreakScore', JSON.stringify(streak));
     updateMetrics();
     updateGamificationThemes();
-    calculateInsights(); // Auto-recalculate whenever data array morphs
+    calculateInsights();
 }
 
 function updateMetrics() {
@@ -101,7 +102,6 @@ function updateMetrics() {
     clearAllBtn.classList.toggle('hidden', total === 0);
 }
 
-// NEW FUNCTIONALITY: Weekly Insight Engine
 function calculateInsights() {
     const total = tasks.length;
     const completed = tasks.filter(t => t.completed).length;
@@ -109,7 +109,6 @@ function calculateInsights() {
     
     completionRateStat.textContent = `${percentage}%`;
 
-    // Compute Preferred Domain mode
     if (total === 0) {
         topCategoryStat.textContent = "None";
         insightsReportText.textContent = `"Your canvas is clear. Add tasks to discover your workflow archetype."`;
@@ -130,7 +129,6 @@ function calculateInsights() {
     
     topCategoryStat.textContent = maxCat;
 
-    // Behavioral Report Generation Rules
     if (percentage === 0) {
         insightsReportText.textContent = `"Plan mapped, but momentum stalled. Choose a task, hit the 🎯 icon, and challenge yourself to build execution habits!"`;
     } else if (percentage < 50) {
@@ -238,9 +236,10 @@ function renderTasks() {
 
         renderedCount++;
         const isOverdue = !task.completed && task.dueDate && task.dueDate < todayStr;
-        const li = document.createElement('li');
+        const isExpanded = expandedTaskId === task.id;
         
-        li.className = `flex items-center justify-between p-3.5 border rounded-xl group hover:bg-white transition-all duration-200 ${
+        const li = document.createElement('li');
+        li.className = `flex flex-col border rounded-xl overflow-hidden transition-all duration-200 ${
             activeFocalId ? 'bg-indigo-50/40 border-indigo-300 ring-4 ring-indigo-500/10' :
             isOverdue ? 'bg-rose-50/50 border-rose-200 overdue-pulse shadow-sm shadow-rose-100' : 
             'bg-slate-50/60 border-slate-100 hover:border-indigo-100'
@@ -263,31 +262,79 @@ function renderTasks() {
 
         const targetBtnVisibility = (task.completed || activeFocalId) ? 'hidden' : 'inline-block';
 
+        // Render Subtask Sub-Elements list
+        let subtasksHtml = '';
+        (task.subtasks || []).forEach((sub, subIdx) => {
+            const subDoneStyle = sub.completed ? 'line-through text-slate-400' : 'text-slate-600';
+            const subChecked = sub.completed ? 'checked' : '';
+            subtasksHtml += `
+                <div class="flex items-center gap-2 text-xs py-0.5">
+                    <input type="checkbox" ${subChecked} data-sub-idx="${subIdx}" class="subtask-checkbox w-3.5 h-3.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500/20 cursor-pointer">
+                    <span class="${subDoneStyle}">${sub.text}</span>
+                </div>
+            `;
+        });
+
         li.innerHTML = `
-            <div class="flex items-center gap-3 flex-1 min-w-0">
-                <input type="checkbox" ${isChecked} class="w-5 h-5 text-indigo-600 rounded-lg focus:ring-indigo-500/30 border-slate-300 cursor-pointer checkbox-btn transition-all">
-                <div class="flex flex-col flex-1 min-w-0 gap-0.5">
-                    <span class="task-text truncate text-sm transition-all ${textStyle}">${task.text}</span>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-[9px] tracking-wide uppercase px-1.5 py-0.2 rounded font-bold shrink-0 ${tagColor}">${task.category}</span>
-                        ${dateBadge}
+            <!-- Main Content Bar Layer -->
+            <div class="flex items-center justify-between p-3.5 cursor-pointer task-main-row select-none">
+                <div class="flex items-center gap-3 flex-1 min-w-0 pointer-events-none">
+                    <input type="checkbox" ${isChecked} class="w-5 h-5 text-indigo-600 rounded-lg border-slate-300 cursor-pointer checkbox-btn transition-all pointer-events-auto">
+                    <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+                        <span class="task-text truncate text-sm transition-all ${textStyle}">${task.text}</span>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[9px] tracking-wide uppercase px-1.5 py-0.2 rounded font-bold shrink-0 ${tagColor}">${task.category}</span>
+                            ${dateBadge}
+                            ${task.subtasks?.length ? `<span class="text-[10px] text-slate-400 font-medium">📋 ${task.subtasks.filter(s=>s.completed).length}/${task.subtasks.length}</span>` : ''}
+                        </div>
                     </div>
                 </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button title="Start 60s Focus Sprint" class="text-slate-300 hover:text-indigo-600 p-1 rounded transition-all transform hover:scale-110 focal-target-btn ${targetBtnVisibility}">
+                        🎯
+                    </button>
+                    <button class="text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 p-1 delete-btn transform scale-90 group-hover:scale-100">
+                        ✕
+                </button>
+                </div>
             </div>
-            <div class="flex items-center gap-1.5">
-                <button title="Start 60s Focus Sprint" class="text-slate-300 hover:text-indigo-600 p-1 rounded transition-all transform hover:scale-110 focal-target-btn ${targetBtnVisibility}">
-                    🎯
-                </button>
-                <button class="text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 p-1 delete-btn transform scale-90 group-hover:scale-100">
-                    ✕
-                </button>
+
+            <!-- Expandable Notes & Subtasks Drawer View (NEW FEATURE) -->
+            <div class="detail-drawer border-t border-slate-100 bg-slate-50/40 px-3.5 pb-4 pt-2 ${isExpanded ? 'block' : 'hidden'}">
+                <!-- Checklist Area -->
+                <div class="mb-3">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Subtasks Checklist</p>
+                    <div class="space-y-1 subtasks-container">${subtasksHtml}</div>
+                    <div class="flex gap-1.5 mt-2">
+                        <input type="text" placeholder="Add nested milestone..." class="new-subtask-input flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-400">
+                        <button class="add-subtask-btn bg-slate-200 hover:bg-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 rounded transition-colors">+</button>
+                    </div>
+                </div>
+                
+                <!-- Extra Context Notes Area -->
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Context Blueprint</p>
+                    <textarea placeholder="Write documentation, scratchpads, or links here..." class="task-notes-area w-full bg-white border border-slate-200 rounded p-2 text-xs text-slate-600 h-16 focus:outline-none focus:border-indigo-400 resize-none">${task.notes || ''}</textarea>
+                </div>
             </div>
         `;
 
+        // Event Interceptors & Selectors
+        const mainRow = li.querySelector('.task-main-row');
         const checkbox = li.querySelector('.checkbox-btn');
+        const notesArea = li.querySelector('.task-notes-area');
+        const newSubtaskInput = li.querySelector('.new-subtask-input');
+        const addSubtaskBtn = li.querySelector('.add-subtask-btn');
+
+        // Toggle Expand/Collapse Drawer when clicking general space on row
+        mainRow.addEventListener('click', (e) => {
+            if (e.target.closest('input') || e.target.closest('button')) return;
+            expandedTaskId = expandedTaskId === task.id ? null : task.id;
+            renderTasks();
+        });
+
         checkbox.addEventListener('change', () => {
             task.completed = checkbox.checked;
-            
             if (checkbox.checked) {
                 if (activeFocalId && task.id === activeFocalId) {
                     streak++;
@@ -310,9 +357,41 @@ function renderTasks() {
         li.querySelector('.delete-btn').addEventListener('click', () => {
             playSound('delete');
             if (activeFocalId && task.id === activeFocalId) breakFocalStreak(false);
+            if (expandedTaskId === task.id) expandedTaskId = null;
             tasks = tasks.filter(t => t.id !== task.id);
             saveTasks();
             renderTasks();
+        });
+
+        // Live Subtask Checkboxes Trigger Binding
+        li.querySelectorAll('.subtask-checkbox').forEach(box => {
+            box.addEventListener('change', () => {
+                const idx = parseInt(box.getAttribute('data-sub-idx'));
+                task.subtasks[idx].completed = box.checked;
+                if (box.checked) playSound('complete');
+                saveTasks();
+                renderTasks();
+            });
+        });
+
+        // Add Subtask Milestone Button Logic
+        const createSubtask = () => {
+            const subText = newSubtaskInput.value.trim();
+            if (!subText) return;
+            if (!task.subtasks) task.subtasks = [];
+            task.subtasks.push({ text: subText, completed: false });
+            newSubtaskInput.value = '';
+            playSound('add');
+            saveTasks();
+            renderTasks();
+        };
+        addSubtaskBtn.addEventListener('click', createSubtask);
+        newSubtaskInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') createSubtask(); });
+
+        // Notes Change Persistence Layer
+        notesArea.addEventListener('input', () => {
+            task.notes = notesArea.value;
+            localStorage.setItem('zenTasks', JSON.stringify(tasks));
         });
 
         taskList.appendChild(li);
@@ -334,7 +413,9 @@ function addTask() {
         text: taskText,
         category: category,
         dueDate: dueDate || null,
-        completed: false
+        completed: false,
+        subtasks: [], // Initialized empty structure arrays
+        notes: ""
     });
 
     playSound('add');
@@ -353,6 +434,7 @@ clearAllBtn.addEventListener('click', () => {
     if (confirm('Clear entire canvas?')) {
         tasks = [];
         streak = 0;
+        expandedTaskId = null;
         playSound('delete');
         saveTasks();
         renderTasks();
