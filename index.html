@@ -22,14 +22,18 @@
                     🔥 STREAK: <span id="streakCount">0</span>x
                 </div>
             </div>
-            <div class="flex gap-1">
+            <div class="flex gap-1 items-center">
                 <!-- Insights Toggle Button -->
                 <button id="insightsToggleBtn" class="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 transition-all text-xs font-medium" title="View Weekly Insights">
                     📊 Insights
                 </button>
-                <button id="soundToggle" class="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 transition-all text-xs flex items-center gap-1 font-medium">
-                    <span id="soundIcon">🔊</span> Sound On
-                </button>
+                <!-- Soundscape Selector (NEW FEATURE) -->
+                <select id="soundscapeSelect" class="bg-slate-50 border border-slate-200 text-slate-500 hover:text-indigo-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-xs font-medium cursor-pointer transition-all">
+                    <option value="arcade">👾 Retro Arcade</option>
+                    <option value="zen">🎋 Zen Chimes</option>
+                    <option value="cyber">🌐 Cyber Blips</option>
+                    <option value="silent">🔇 Mute Audio</option>
+                </select>
             </div>
         </div>
 

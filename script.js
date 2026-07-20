@@ -9,8 +9,6 @@ const filterButtons = document.querySelectorAll('.filter-btn');
 const progressBar = document.getElementById('progressBar');
 const statsText = document.getElementById('statsText');
 const emptyState = document.getElementById('emptyState');
-const soundToggle = document.getElementById('soundToggle');
-const soundIcon = document.getElementById('soundIcon');
 
 // Gamification Registry
 const streakBadge = document.getElementById('streakBadge');
@@ -33,24 +31,28 @@ const completionRateStat = document.getElementById('completionRateStat');
 const topCategoryStat = document.getElementById('topCategoryStat');
 const insightsReportText = document.getElementById('insightsReportText');
 
+// SOUNDSCAPE REGISTRY (NEW FEATURE)
+const soundscapeSelect = document.getElementById('soundscapeSelect');
+
 // Application States
 let tasks = JSON.parse(localStorage.getItem('zenTasks')) || [];
 let currentFilter = 'all';
-let soundEnabled = JSON.parse(localStorage.getItem('zenSound')) ?? true;
+let soundscape = localStorage.getItem('zenSoundscape') || 'arcade'; // arcade, zen, cyber, silent
 let activeFocalId = null;
 let focalCountdown = null;
 let secondsLeft = 60;
 let streak = JSON.parse(localStorage.getItem('zenStreakScore')) || 0;
-let expandedTaskId = null; // Track note drawer expansions separately
+let expandedTaskId = null;
 
 const today = new Date().toISOString().split('T')[0];
 dateInput.value = today;
+soundscapeSelect.value = soundscape;
 
-// Web Audio API Synthesizer Pipeline
+// Web Audio API Polyphonic Synthesizer Pipeline
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(type) {
-    if (!soundEnabled) return;
+    if (soundscape === 'silent') return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
     
     const osc = audioCtx.createOscillator();
@@ -59,27 +61,78 @@ function playSound(type) {
     gainNode.connect(audioCtx.destination);
     const now = audioCtx.currentTime;
 
-    if (type === 'add') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-        gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-        osc.start(now); osc.stop(now + 0.1);
-    } else if (type === 'complete') {
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now + 0.08);
-        gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-        osc.start(now); osc.stop(now + 0.25);
-    } else if (type === 'delete') {
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.linearRampToValueAtTime(80, now + 0.15);
-        gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-        osc.start(now); osc.stop(now + 0.15);
-    } else if (type === 'streak') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
-        gainNode.gain.setValueAtTime(0.25, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-        osc.start(now); osc.stop(now + 0.2);
-    } else if (type === 'fail') {
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(60, now + 0.4);
-        gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-        osc.start(now); osc.stop(now + 0.4);
+    // AUDIO PROFILE SELECTOR DISPATCH MATRIX
+    if (soundscape === 'arcade') {
+        // High-energy 8-bit retro behaviors
+        if (type === 'add') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(450, now + 0.05);
+            gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'complete') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(523, now); osc.frequency.setValueAtTime(659, now + 0.06); osc.frequency.setValueAtTime(784, now + 0.12);
+            gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'delete') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.linearRampToValueAtTime(60, now + 0.12);
+            gainNode.gain.setValueAtTime(0.08, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+            osc.start(now); osc.stop(now + 0.12);
+        } else if (type === 'streak') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.25);
+            gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'fail') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, now); osc.frequency.linearRampToValueAtTime(40, now + 0.4);
+            gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        }
+    } else if (soundscape === 'zen') {
+        // Crystalline ambient metallic sound resonance architecture
+        osc.type = 'sine';
+        if (type === 'add') {
+            osc.frequency.setValueAtTime(642, now);
+            gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        } else if (type === 'complete') {
+            osc.frequency.setValueAtTime(880, now);
+            gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+            osc.start(now); osc.stop(now + 0.7);
+        } else if (type === 'delete') {
+            osc.frequency.setValueAtTime(311, now);
+            gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'streak') {
+            osc.frequency.setValueAtTime(987, now);
+            gainNode.gain.setValueAtTime(0.25, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+            osc.start(now); osc.stop(now + 0.9);
+        } else if (type === 'fail') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(180, now);
+            gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+            osc.start(now); osc.stop(now + 0.6);
+        }
+    } else if (soundscape === 'cyber') {
+        // High-tech futuristic interface components
+        osc.type = 'triangle';
+        if (type === 'add') {
+            osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1600, now + 0.04);
+            gainNode.gain.setValueAtTime(0.08, now); gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.05);
+            osc.start(now); osc.stop(now + 0.05);
+        } else if (type === 'complete') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now); osc.frequency.setValueAtTime(2400, now + 0.05);
+            gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'delete') {
+            osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(100, now + 0.08);
+            gainNode.gain.setValueAtTime(0.08, now); gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.08);
+            osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'streak') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(1500, now); osc.frequency.linearRampToValueAtTime(3000, now + 0.1);
+            gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'fail') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(90, now);
+            gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        }
     }
 }
 
@@ -262,7 +315,6 @@ function renderTasks() {
 
         const targetBtnVisibility = (task.completed || activeFocalId) ? 'hidden' : 'inline-block';
 
-        // Render Subtask Sub-Elements list
         let subtasksHtml = '';
         (task.subtasks || []).forEach((sub, subIdx) => {
             const subDoneStyle = sub.completed ? 'line-through text-slate-400' : 'text-slate-600';
@@ -276,7 +328,6 @@ function renderTasks() {
         });
 
         li.innerHTML = `
-            <!-- Main Content Bar Layer -->
             <div class="flex items-center justify-between p-3.5 cursor-pointer task-main-row select-none">
                 <div class="flex items-center gap-3 flex-1 min-w-0 pointer-events-none">
                     <input type="checkbox" ${isChecked} class="w-5 h-5 text-indigo-600 rounded-lg border-slate-300 cursor-pointer checkbox-btn transition-all pointer-events-auto">
@@ -295,13 +346,11 @@ function renderTasks() {
                     </button>
                     <button class="text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 p-1 delete-btn transform scale-90 group-hover:scale-100">
                         ✕
-                </button>
+                    </button>
                 </div>
             </div>
 
-            <!-- Expandable Notes & Subtasks Drawer View (NEW FEATURE) -->
             <div class="detail-drawer border-t border-slate-100 bg-slate-50/40 px-3.5 pb-4 pt-2 ${isExpanded ? 'block' : 'hidden'}">
-                <!-- Checklist Area -->
                 <div class="mb-3">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Subtasks Checklist</p>
                     <div class="space-y-1 subtasks-container">${subtasksHtml}</div>
@@ -310,8 +359,6 @@ function renderTasks() {
                         <button class="add-subtask-btn bg-slate-200 hover:bg-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 rounded transition-colors">+</button>
                     </div>
                 </div>
-                
-                <!-- Extra Context Notes Area -->
                 <div>
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Context Blueprint</p>
                     <textarea placeholder="Write documentation, scratchpads, or links here..." class="task-notes-area w-full bg-white border border-slate-200 rounded p-2 text-xs text-slate-600 h-16 focus:outline-none focus:border-indigo-400 resize-none">${task.notes || ''}</textarea>
@@ -319,14 +366,12 @@ function renderTasks() {
             </div>
         `;
 
-        // Event Interceptors & Selectors
         const mainRow = li.querySelector('.task-main-row');
         const checkbox = li.querySelector('.checkbox-btn');
         const notesArea = li.querySelector('.task-notes-area');
         const newSubtaskInput = li.querySelector('.new-subtask-input');
         const addSubtaskBtn = li.querySelector('.add-subtask-btn');
 
-        // Toggle Expand/Collapse Drawer when clicking general space on row
         mainRow.addEventListener('click', (e) => {
             if (e.target.closest('input') || e.target.closest('button')) return;
             expandedTaskId = expandedTaskId === task.id ? null : task.id;
@@ -363,7 +408,6 @@ function renderTasks() {
             renderTasks();
         });
 
-        // Live Subtask Checkboxes Trigger Binding
         li.querySelectorAll('.subtask-checkbox').forEach(box => {
             box.addEventListener('change', () => {
                 const idx = parseInt(box.getAttribute('data-sub-idx'));
@@ -374,7 +418,6 @@ function renderTasks() {
             });
         });
 
-        // Add Subtask Milestone Button Logic
         const createSubtask = () => {
             const subText = newSubtaskInput.value.trim();
             if (!subText) return;
@@ -388,7 +431,6 @@ function renderTasks() {
         addSubtaskBtn.addEventListener('click', createSubtask);
         newSubtaskInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') createSubtask(); });
 
-        // Notes Change Persistence Layer
         notesArea.addEventListener('input', () => {
             task.notes = notesArea.value;
             localStorage.setItem('zenTasks', JSON.stringify(tasks));
@@ -414,7 +456,7 @@ function addTask() {
         category: category,
         dueDate: dueDate || null,
         completed: false,
-        subtasks: [], // Initialized empty structure arrays
+        subtasks: [],
         notes: ""
     });
 
@@ -448,14 +490,11 @@ filterButtons.forEach(button => {
     });
 });
 
-soundToggle.addEventListener('click', () => {
-    soundEnabled = !soundEnabled;
-    localStorage.setItem('zenSound', JSON.stringify(soundEnabled));
-    soundIcon.textContent = soundEnabled ? '🔊' : '🔇';
-    soundToggle.className = soundEnabled 
-        ? "text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 transition-all text-xs flex items-center gap-1 font-medium"
-        : "text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-all text-xs flex items-center gap-1 font-medium";
-    soundToggle.innerHTML = `<span>${soundEnabled ? '🔊' : '🔇'}</span> Sound ${soundEnabled ? 'On' : 'Off'}`;
+// Soundscape Change Switcher Listener
+soundscapeSelect.addEventListener('change', (e) => {
+    soundscape = e.target.value;
+    localStorage.setItem('zenSoundscape', soundscape);
+    playSound('add'); // Quick preview ping on select change
 });
 
 // Insights Panel Toggle Interactions
