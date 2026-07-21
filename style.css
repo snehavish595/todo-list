@@ -1,6 +1,17 @@
-/* Fluid task addition animation */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Translucent Glassmorphic Shell */
+.glass-card {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+/* Smooth Task Ingress Animation */
 @keyframes popIn {
-    0% { opacity: 0; transform: scale(0.96) translateY(4px); }
+    0% { opacity: 0; transform: scale(0.97) translateY(6px); }
     100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -8,27 +19,45 @@
     animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Dragging visual effect */
+.dragging {
+    opacity: 0.4;
+    border-color: #6366f1 !important;
+}
+
+/* Overdue warning pulse */
 @keyframes softPulse {
     0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.03); opacity: 0.9; }
+    50% { transform: scale(1.02); opacity: 0.85; }
 }
 
 .overdue-pulse {
-    animation: softPulse 2s infinite ease-in-out;
+    animation: softPulse 2.5s infinite ease-in-out;
 }
 
-.streak-cyan { box-shadow: 0 0 25px rgba(6, 182, 212, 0.25); }
-.streak-gold { box-shadow: 0 0 35px rgba(234, 179, 8, 0.4); animation: softPulse 3s infinite ease-in-out; }
-
-input[type="checkbox"]:checked + span {
-    position: relative;
-    transition: color 0.3s ease;
-}
+/* Dynamic Streak Glowing States */
+.streak-cyan { box-shadow: 0 0 30px rgba(6, 182, 212, 0.2); }
+.streak-gold { box-shadow: 0 0 40px rgba(245, 158, 11, 0.25); }
 
 .filter-btn {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .detail-drawer {
-    transition: all 0.25s ease-out;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Custom Scrollbar for inner drawers */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(51, 65, 85, 0.8);
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(71, 85, 105, 1);
 }
